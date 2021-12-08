@@ -6,7 +6,7 @@ function render(vdom, container) {
 
 function mount(vdom, container) {
   let newDOM = createDOM(vdom);
-  container.appendChild(newDOM.dom);
+  container.appendChild(newDOM);
 }
 
 function createDOM(vdom) {
@@ -14,11 +14,55 @@ function createDOM(vdom) {
   let dom;
   if (type === REACT_TEXT) {
     dom = document.createTextNode(props.content);
-  } else {
+  } else if (typeof type === "function") {
+    dom = mountFunctionComponent(vdom);
+  } else if (typeof type === "string") {
     dom = document.createElement(type);
   }
+  if (props) {
+    updateProps(dom, {}, props);
+    let children = props.children;
+    if (typeof children === "object" && children.type) {
+      props.children.mountIndex = 0;
+      mount(children, dom);
+    } else if (Array.isArray(children)) {
+      reconcileChildren(children, dom);
+    }
+  }
   vdom.dom = dom;
-  return vdom;
+  return dom;
+}
+
+function mountFunctionComponent(vdom) {
+  let { type: functionComponent, props } = vdom;
+  let renderVdom = functionComponent(props);
+  return createDOM(renderVdom);
+}
+function reconcileChildren(children, parentDOM) {
+  children.forEach((childVdom, index) => {
+    childVdom.mountIndex = index;
+    mount(childVdom, parentDOM);
+  });
+}
+function updateProps(dom, oldProps, newProps) {
+  for (let key in newProps) {
+    if (key === "children") {
+      //此处不处理子节点
+      continue;
+    } else if (key === "style") {
+      let styleObj = newProps[key];
+      for (let attr in styleObj) {
+        dom.style[attr] = styleObj[attr];
+      }
+    } else {
+      dom[key] = newProps[key];
+    }
+  }
+  for (let key in oldProps) {
+    if (!newProps.hasOwnProperty(key)) {
+      dom[key] = null;
+    }
+  }
 }
 
 const ReactDOM = {
