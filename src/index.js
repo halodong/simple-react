@@ -1,9 +1,14 @@
-import React from "react";
-import ReactDOM from "react-dom";
-import myReact from "./react";
-import myReactDOM from "./react-dom";
-const ReactEl = React.createElement("h1", { id: "title" }, "hello");
-const ReactEl1 = myReact.createElement("h1", { id: "title" }, "hello");
-console.log(ReactEl, ReactEl1);
+import React from "./react";
+import ReactDOM from "./react-dom";
+
+function FncComponent(props) {
+  return <div>hello{props.name}</div>;
+}
+function FncComponent1(props) {
+  return<FncComponent name="fnc"/>;
+}
+
+const ReactEl = <FncComponent1 />;
+console.log(ReactEl);
+
 ReactDOM.render(ReactEl, document.getElementById("root"));
-myReactDOM.render(ReactEl1, document.getElementById("root"));
