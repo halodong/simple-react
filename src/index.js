@@ -1,14 +1,16 @@
 import React from "./react";
 import ReactDOM from "./react-dom";
 
-function FncComponent(props) {
-  return <div>hello{props.name}</div>;
+class ClassComponent extends React.Component {
+  constructor(props){
+    super()
+    this.props = props
+  }
+  render() {
+    return <div>hello{this.props.name}</div>;
+  }
 }
-function FncComponent1(props) {
-  return<FncComponent name="fnc"/>;
-}
-
-const ReactEl = <FncComponent1 />;
+const ReactEl = <ClassComponent name="ni"/>;
 console.log(ReactEl);
 
 ReactDOM.render(ReactEl, document.getElementById("root"));

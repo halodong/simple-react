@@ -15,7 +15,11 @@ function createDOM(vdom) {
   if (type === REACT_TEXT) {
     dom = document.createTextNode(props.content);
   } else if (typeof type === "function") {
-    dom = mountFunctionComponent(vdom);
+    if (type.isReactComponent) {
+      dom = mountClassComponent(vdom);
+    } else {
+      dom = mountFunctionComponent(vdom);
+    }
   } else if (typeof type === "string") {
     dom = document.createElement(type);
   }
@@ -32,10 +36,14 @@ function createDOM(vdom) {
   vdom.dom = dom;
   return dom;
 }
-
+function mountClassComponent(vdom) {
+  const { type: classComponent, props } = vdom;
+  const instance = new classComponent(props);
+  return createDOM(instance.render());
+}
 function mountFunctionComponent(vdom) {
-  let { type: functionComponent, props } = vdom;
-  let renderVdom = functionComponent(props);
+  const { type: functionComponent, props } = vdom;
+  const renderVdom = functionComponent(props);
   return createDOM(renderVdom);
 }
 function reconcileChildren(children, parentDOM) {

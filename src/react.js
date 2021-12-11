@@ -1,5 +1,6 @@
 import { REACT_ELEMENT } from "./constants";
 import { wrapToVdom } from "./utils";
+import { Component } from "./component";
 function createElement(type, config, children) {
   const props = { ...config };
   let ref, key;
@@ -25,6 +26,7 @@ function createElement(type, config, children) {
 
 const React = {
   createElement,
+  Component,
 };
 
 export default React;
