@@ -1,5 +1,5 @@
 import { REACT_TEXT } from "./constants";
-
+import { addEvent } from "./event";
 function render(vdom, container) {
   mount(vdom, container);
 }
@@ -62,6 +62,8 @@ function updateProps(dom, oldProps, newProps) {
       for (let attr in styleObj) {
         dom.style[attr] = styleObj[attr];
       }
+    } else if (key.startsWith("on")) {
+      addEvent(dom, key.toLowerCase(), newProps[key]);
     } else {
       dom[key] = newProps[key];
     }
