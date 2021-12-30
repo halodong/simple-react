@@ -1,56 +1,100 @@
+
+import { compareTwoVdom, findDOM } from './react-dom';
 export let updateQueue = {
-  isBatchingUpdate: false, //来控制更新是同步还是异步
-  updaters: new Set(), //更新的数组
-  batchUpdate() {
-    //批量更新
-    for (var updater of updateQueue.updaters) {
-      updater.updateComponent();
+    isBatchingUpdate: false,
+    updaters: new Set(),
+    batchUpdate() {
+        for (var updater of updateQueue.updaters) {
+            updater.updateComponent();
+        }
+        updateQueue.isBatchingUpdate = false;
+        updateQueue.updaters.clear();
     }
-    updateQueue.isBatchingUpdate = false;
-    updateQueue.updaters.clear();
-  },
-};
+}
 class Updater {
-  constructor(classInstance) {
-    this.classInstance = classInstance;
-    this.pendingStates = [];
-  }
-  addState(partialState) {
-    this.pendingStates.push(partialState);
-    this.emitUpdate();
-  }
-  emitUpdate(nextProps) {
-    this.nextProps = nextProps;
-    if (updateQueue.isBatchingUpdate) {
-      //说明当前处于批量列新模式
-      updateQueue.updaters.add(this);
-    } else {
-      this.updateComponent();
+    constructor(classInstance) {
+        this.classInstance = classInstance;
+        this.pendingStates = [];
     }
-  }
-
-  //基于老状态和pendingStates获取新状态
-  getState() {
-    let { classInstance, pendingStates } = this;
-    let { state } = classInstance; //老状态
-    pendingStates.forEach((nextState) => {
-      if (typeof nextState === "function") {
-        nextState = nextState(state);
-      }
-      state = { ...state, ...nextState };
-    });
-    pendingStates.length = 0;
-    return state;
-  }
+    addState(partialState) {
+        this.pendingStates.push(partialState);
+        this.emitUpdate();
+    }
+    emitUpdate(nextProps) {
+        this.nextProps = nextProps;
+        if (updateQueue.isBatchingUpdate) {
+            updateQueue.updaters.add(this);
+        } else {
+            this.updateComponent();
+        }
+    }
+    updateComponent() {
+        let { nextProps, classInstance, pendingStates } = this;
+        if (nextProps || pendingStates.length > 0) {
+            shouldUpdate(classInstance, nextProps, this.getState());
+        }
+    }
+    getState() {
+        let { classInstance, pendingStates } = this;
+        let { state } = classInstance;
+        pendingStates.forEach((nextState) => {
+            if (typeof nextState === 'function') {
+                nextState = nextState(state);
+            }
+            state = { ...state, ...nextState };
+        });
+        pendingStates.length = 0;
+        return state;
+    }
 }
-
+function shouldUpdate(classInstance, nextProps, nextState) {
+    let willUpdate = true;
+    if (classInstance.shouldComponentUpdate
+        && !classInstance.shouldComponentUpdate(nextProps, nextState)) {
+        willUpdate = false;
+    }
+    if (willUpdate && classInstance.componentWillUpdate) {
+        classInstance.componentWillUpdate();
+    }
+    if (nextProps) {
+        classInstance.props = nextProps;
+    }
+    classInstance.state = nextState;
+    if (willUpdate) {
+        classInstance.forceUpdate();
+    }
+}
 class Component {
-  static isReactComponent = true;
-  constructor(props) {
-    this.props = props;
-    this.state = {};
-    this.updater = new Updater(this);
-  }
+    static isReactComponent = true
+    constructor(props) {
+        this.props = props;
+        this.state = {};
+        this.updater = new Updater(this);
+    }
+    setState(partialState) {
+        this.updater.addState(partialState);
+    }
+    forceUpdate() {
+        let oldRenderVdom = this.oldRenderVdom;
+        let oldDOM = findDOM(oldRenderVdom);
+        if (this.constructor.contextType) {
+            this.context = this.constructor.contextType._currentValue;
+        }
+        if (this.constructor.getDerivedStateFromProps) {
+            let newState = this.constructor.getDerivedStateFromProps(this.props, this.state);
+            if (newState) {
+                this.state = { ...this.state, ...newState };
+            }
+        }
+        let newRenderVdom = this.render();
+        let snapshot = this.getSnapshotBeforeUpdate && this.getSnapshotBeforeUpdate();
+        compareTwoVdom(oldDOM.parentNode, oldRenderVdom, newRenderVdom);
+        this.oldRenderVdom = newRenderVdom;
+        if (this.componentDidUpdate) {
+            this.componentDidUpdate(this.props, this.state, snapshot);
+        }
+    }
 }
-
-export { Component };
+export {
+    Component
+};
